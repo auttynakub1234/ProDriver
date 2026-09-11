@@ -23,7 +23,7 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String
-  features    String[]
+  features    String   // เก็บเป็น JSON string แทน array
   price       Float
   downloadUrl String
   imageUrl    String?
