@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
         const user = await User.findById(license.userId);
 
         const token = signToken({
-          userId: user._id.toString(),
-          email: user.email,
-          role: user.role,
+          userId: user?._id.toString() || "system",
+          email: user?.email || "system@prodriver.local",
+          role: user?.role || "user",
         });
 
         return NextResponse.json<ActivateKeyResponse>({
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
           message: "เข้าสู่ระบบสำเร็จ",
           token,
           product: {
-            name: product?.name || "",
-            downloadUrl: product?.downloadUrl || "",
+            name: product?.name || "ProDriver Premium",
+            downloadUrl: product?.downloadUrl || "#",
           },
         });
       } else {
@@ -101,11 +101,11 @@ export async function POST(request: NextRequest) {
       userEmail: user?.email,
     });
 
-    // สร้าง JWT Token สำหรับผู้ใช้
+    // สร้าง JWT Token
     const token = signToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
+      userId: user?._id.toString() || "system",
+      email: user?.email || "system@prodriver.local",
+      role: user?.role || "user",
     });
 
     return NextResponse.json<ActivateKeyResponse>(
@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
         message: "เปิดใช้งานคีย์สำเร็จ",
         token,
         product: {
-          name: product?.name || "",
-          downloadUrl: product?.downloadUrl || "",
+          name: product?.name || "ProDriver Premium",
+          downloadUrl: product?.downloadUrl || "#",
         },
       },
       { status: 200 }

@@ -10,14 +10,11 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-indigo-600">ProDriver Shop</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/login" className="text-gray-700 hover:text-indigo-600">
-                เข้าสู่ระบบ
-              </Link>
               <Link
-                href="/register"
+                href="/activate"
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
               >
-                สมัครสมาชิก
+                เปิดใช้งานคีย์
               </Link>
             </div>
           </div>
@@ -61,23 +58,38 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-md p-8">
           <h3 className="text-2xl font-bold mb-6">สินค้ายอดนิยม</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Product cards will be populated from database */}
             <div className="border rounded-lg p-4 hover:shadow-lg transition-shadow">
               <div className="bg-gray-200 h-40 rounded-md mb-4 flex items-center justify-center">
                 <span className="text-4xl">📦</span>
               </div>
-              <h4 className="font-semibold text-lg mb-2">Sample Mod APK</h4>
+              <h4 className="font-semibold text-lg mb-2">ProDriver Premium</h4>
               <p className="text-gray-600 text-sm mb-4">
-                รายละเอียดสินค้าจะแสดงที่นี่
+                ฟีเจอร์พรีเมียมครบ ปลดล็อกทุกอย่าง
               </p>
               <div className="flex justify-between items-center">
                 <span className="text-indigo-600 font-bold">฿299</span>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                  ซื้อเลย
-                </button>
+                <a
+                  href="https://line.me/ti/p/YOUR_LINE_ID"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  สั่งซื้อทาง LINE
+                </a>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="mt-12 bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-indigo-900 mb-3">📋 ขั้นตอนการสั่งซื้อ</h3>
+          <ol className="list-decimal list-inside space-y-2 text-gray-700">
+            <li>ติดต่อผ่าน LINE เพื่อสั่งซื้อสินค้า</li>
+            <li>โอนเงินและส่งหลักฐานการโอนเงิน</li>
+            <li>รับ License Key ผ่าน LINE</li>
+            <li>ดาวน์โหลด APK และเปิดใช้งานด้วย Key ที่ได้รับ</li>
+            <li>แอปจะส่ง Device ID ไปยังระบบอัตโนมัติ</li>
+          </ol>
         </div>
       </main>
     </div>
