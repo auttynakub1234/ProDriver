@@ -29,21 +29,21 @@ model Product {
   downloads        Download[]
 }
 
-// Token สำหรับ Login + Download
+// Token สำหรับ Login + Download (NO DEVICE LOCK)
 model Token {
-  id           String    @id @default(cuid())
-  token        String    @unique // 8 หลัก เช่น 12345678
-  productId    String
-  customerName String
+  id            String    @id @default(cuid())
+  token         String    @unique // 8 หลัก เช่น 12345678
+  productId     String
+  customerName  String
   customerPhone String
-  isUsed       Boolean   @default(false)
-  usedAt       DateTime?
-  expiresAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  downloadCount Int       @default(0) // นับจำนวนดาวน์โหลด
+  lastUsedAt    DateTime? // ใช้ล่าสุดเมื่อไหร่
+  expiresAt     DateTime? // วันหมดอายุ (optional)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  product      Product   @relation(fields: [productId], references: [id])
-  downloads    Download[]
+  product       Product   @relation(fields: [productId], references: [id])
+  downloads     Download[]
 
   @@index([token])
   @@index([productId])
@@ -69,7 +69,7 @@ model Payment {
   @@index([productId])
 }
 
-// ประวัติการดาวน์โหลด
+// ประวัติการดาวน์โหลด (ไม่จำกัดจำนวนครั้ง)
 model Download {
   id           String   @id @default(cuid())
   tokenId      String

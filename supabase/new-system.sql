@@ -1,12 +1,12 @@
 -- ===================================================
--- ProDriver - New System: Token-Based with PromptPay
+-- ProDriver - Token System (No Device Lock)
 -- ===================================================
 -- System Flow:
 -- 1. User sees products on website (card display)
--- 2. User pays via PromptPay QR
--- 3. Admin checks payment and creates token
--- 4. User logs in with token
--- 5. User downloads purchased APK
+-- 2. User pays via PromptPay QR or Admin creates token
+-- 3. User logs in with token
+-- 4. User can download APK unlimited times
+-- 5. Token can be used on multiple devices
 -- ===================================================
 
 -- Drop existing tables
@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS "User" CASCADE;
 DROP TABLE IF EXISTS "Token" CASCADE;
 DROP TABLE IF EXISTS "Payment" CASCADE;
 DROP TABLE IF EXISTS "Download" CASCADE;
+DROP TABLE IF EXISTS "Settings" CASCADE;
 
 -- ===================================================
 -- Create New Tables
@@ -40,15 +41,15 @@ CREATE TABLE "Product" (
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
 
--- Tokens Table (for login and download)
+-- Tokens Table (for login and download - NO DEVICE LOCK)
 CREATE TABLE "Token" (
     "id" TEXT NOT NULL,
     "token" TEXT NOT NULL, -- 8-digit token (e.g., 12345678)
     "productId" TEXT NOT NULL,
     "customerName" TEXT NOT NULL,
     "customerPhone" TEXT NOT NULL,
-    "isUsed" BOOLEAN NOT NULL DEFAULT false,
-    "usedAt" TIMESTAMP(3),
+    "downloadCount" INTEGER NOT NULL DEFAULT 0, -- Track download count
+    "lastUsedAt" TIMESTAMP(3), -- Last time token was used
     "expiresAt" TIMESTAMP(3), -- Optional expiration
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT now(),
@@ -71,7 +72,7 @@ CREATE TABLE "Payment" (
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
 
--- Downloads Table (track downloads)
+-- Downloads Table (track downloads - no device restriction)
 CREATE TABLE "Download" (
     "id" TEXT NOT NULL,
     "tokenId" TEXT NOT NULL,
@@ -185,9 +186,9 @@ VALUES
 -- Sample Token (for testing)
 -- ===================================================
 
-INSERT INTO "Token" ("id", "token", "productId", "customerName", "customerPhone", "isUsed", "createdAt", "updatedAt")
+INSERT INTO "Token" ("id", "token", "productId", "customerName", "customerPhone", "downloadCount", "createdAt", "updatedAt")
 VALUES
-    ('tok_sample', '12345678', 'prod_1', 'ทดสอบ ระบบ', '0812345678', false, NOW(), NOW());
+    ('tok_sample', '12345678', 'prod_1', 'ทดสอบ ระบบ', '0812345678', 0, NOW(), NOW());
 
 -- ===================================================
 -- Verification Queries
@@ -214,7 +215,7 @@ BEGIN
     RAISE NOTICE '';
     RAISE NOTICE '📦 Tables created:';
     RAISE NOTICE '  - Product (สินค้า)';
-    RAISE NOTICE '  - Token (รหัสเข้าใช้งาน)';
+    RAISE NOTICE '  - Token (รหัสเข้าใช้งาน - ไม่ล็อกเครื่อง)';
     RAISE NOTICE '  - Payment (การชำระเงิน)';
     RAISE NOTICE '  - Download (ประวัติดาวน์โหลด)';
     RAISE NOTICE '  - Settings (ตั้งค่าเว็บไซต์)';
@@ -223,6 +224,12 @@ BEGIN
     RAISE NOTICE '  - 2 products';
     RAISE NOTICE '  - Sample token: 12345678';
     RAISE NOTICE '  - Default settings';
+    RAISE NOTICE '';
+    RAISE NOTICE '🔓 Token Features:';
+    RAISE NOTICE '  - NO device lock';
+    RAISE NOTICE '  - Unlimited downloads';
+    RAISE NOTICE '  - Use on multiple devices';
+    RAISE NOTICE '  - Track download count';
     RAISE NOTICE '';
     RAISE NOTICE '📝 Next steps:';
     RAISE NOTICE '1. Update PromptPay number in Settings';

@@ -15,9 +15,10 @@ interface Token {
   product: { name: string };
   customerName: string;
   customerPhone: string;
-  isUsed: boolean;
-  usedAt: string | null;
+  downloadCount: number;
+  lastUsedAt: string | null;
   createdAt: string;
+  expiresAt: string | null;
 }
 
 export default function TokensPage() {
@@ -117,7 +118,7 @@ export default function TokensPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">จัดการ Token</h1>
-              <p className="text-gray-600 text-sm">สร้างและจัดการรหัส Token สำหรับลูกค้า</p>
+              <p className="text-gray-600 text-sm">สร้างและจัดการรหัส Token (ไม่ล็อกเครื่อง - ใช้ได้หลายเครื่อง)</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -146,15 +147,15 @@ export default function TokensPage() {
             <p className="text-3xl font-bold text-gray-900">{tokens.length}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-500 text-sm mb-1">ใช้งานแล้ว</p>
+            <p className="text-gray-500 text-sm mb-1">ดาวน์โหลดรวม</p>
             <p className="text-3xl font-bold text-green-600">
-              {tokens.filter((t) => t.isUsed).length}
+              {tokens.reduce((sum, t) => sum + t.downloadCount, 0)}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-500 text-sm mb-1">ยังไม่ใช้งาน</p>
-            <p className="text-3xl font-bold text-orange-600">
-              {tokens.filter((t) => !t.isUsed).length}
+            <p className="text-gray-500 text-sm mb-1">Token ที่ใช้งาน</p>
+            <p className="text-3xl font-bold text-indigo-600">
+              {tokens.filter((t) => t.downloadCount > 0).length}
             </p>
           </div>
         </div>
@@ -165,24 +166,12 @@ export default function TokensPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Token
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    สินค้า
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ลูกค้า
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    สถานะ
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    วันที่สร้าง
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    จัดการ
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Token</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สินค้า</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ลูกค้า</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ดาวน์โหลด</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ใช้ล่าสุด</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -190,9 +179,7 @@ export default function TokensPage() {
                   <tr key={token.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <code className="text-lg font-mono font-bold text-indigo-600">
-                          {token.token}
-                        </code>
+                        <code className="text-lg font-mono font-bold text-indigo-600">{token.token}</code>
                         <button
                           onClick={() => copyToken(token.token)}
                           className="text-gray-400 hover:text-gray-600"
@@ -203,40 +190,35 @@ export default function TokensPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {token.product.name}
-                      </div>
+                      <div className="text-sm font-medium text-gray-900">{token.product.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{token.customerName}</div>
                       <div className="text-sm text-gray-500">{token.customerPhone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {token.isUsed ? (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          ✓ ใช้งานแล้ว
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                          ⏳ ยังไม่ใช้
-                        </span>
-                      )}
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        token.downloadCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {token.downloadCount} ครั้ง
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(token.createdAt).toLocaleDateString("th-TH", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {token.lastUsedAt
+                        ? new Date(token.lastUsedAt).toLocaleDateString("th-TH", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={() => copyToken(token.token)}
                         className="text-indigo-600 hover:text-indigo-900 font-medium"
                       >
-                        คัดลอก Token
+                        คัดลอก
                       </button>
                     </td>
                   </tr>
@@ -276,9 +258,7 @@ export default function TokensPage() {
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  เลือกสินค้า *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">เลือกสินค้า *</label>
                 <select
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -295,9 +275,7 @@ export default function TokensPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ชื่อลูกค้า *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อลูกค้า *</label>
                 <input
                   type="text"
                   required
@@ -309,9 +287,7 @@ export default function TokensPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  เบอร์โทร *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">เบอร์โทร *</label>
                 <input
                   type="tel"
                   required
@@ -323,9 +299,7 @@ export default function TokensPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  หมดอายุ (วัน)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หมดอายุ (วัน)</label>
                 <input
                   type="number"
                   placeholder="เว้นว่าง = ไม่มีวันหมดอายุ"
@@ -333,9 +307,7 @@ export default function TokensPage() {
                   value={formData.expiresInDays}
                   onChange={(e) => setFormData({ ...formData, expiresInDays: e.target.value })}
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  ไม่ระบุ = Token ไม่หมดอายุ
-                </p>
+                <p className="text-sm text-gray-500 mt-1">ไม่ระบุ = Token ไม่หมดอายุ</p>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -357,12 +329,12 @@ export default function TokensPage() {
             </form>
 
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">💡 คำแนะนำ:</h4>
+              <h4 className="font-semibold text-blue-900 mb-2">💡 คุณสมบัติ Token:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Token จะถูกสร้างอัตโนมัติ (8 หลัก)</li>
-                <li>• ส่ง Token ให้ลูกค้าทาง LINE หรือ SMS</li>
-                <li>• ลูกค้าใช้ Token เข้าสู่ระบบและดาวน์โหลด</li>
-                <li>• Token ใช้ได้ 1 ครั้ง (หลังใช้แล้วจะบันทึกประวัติ)</li>
+                <li>• ใช้ได้หลายเครื่อง (ไม่ล็อก Device ID)</li>
+                <li>• ดาวน์โหลดได้ไม่จำกัดครั้ง</li>
+                <li>• ติดตามจำนวนดาวน์โหลด</li>
+                <li>• กำหนดวันหมดอายุได้ (optional)</li>
               </ul>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// ใช้ Token เพื่อ Login และดาวน์โหลด APK
+// ใช้ Token เพื่อ Login และดาวน์โหลด APK (ไม่จำกัดเครื่อง)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // อัปเดตสถานะ Token (ใช้งานแล้ว)
+    // อัปเดตการใช้งาน Token (เพิ่มจำนวนดาวน์โหลด)
     await prisma.token.update({
       where: { id: tokenData.id },
       data: {
-        isUsed: true,
-        usedAt: new Date(),
+        downloadCount: tokenData.downloadCount + 1,
+        lastUsedAt: new Date(),
       },
     });
 
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         version: tokenData.product.version,
         size: tokenData.product.size,
         apkUrl: tokenData.product.apkUrl,
+        downloadCount: tokenData.downloadCount + 1,
       },
     });
   } catch (error) {
