@@ -1,38 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/jwt";
-
-// ⚠️ สำหรับ Demo เท่านั้น - ใน Production ควรเก็บใน Database
-const ADMIN_CREDENTIALS = {
-  username: process.env.ADMIN_USERNAME || "admin",
-  password: process.env.ADMIN_PASSWORD || "admin123", // เปลี่ยนใน production!
-};
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-      const token = signToken({
-        userId: "admin",
-        email: "admin@prodriver.local",
-        role: "admin",
-      });
+    // Get admin password from settings
+    const adminPasswordSetting = await prisma.settings.findUnique({
+      where: { key: "admin_password" },
+    });
 
-      return NextResponse.json({
-        success: true,
-        token,
-      });
-    } else {
+    if (!adminPasswordSetting) {
       return NextResponse.json(
-        { success: false, error: "Username หรือ Password ไม่ถูกต้อง" },
+        { success: false, message: "ไม่พบข้อมูลผู้ดูแลระบบ" },
+        { status: 500 }
+      );
+    }
+
+    // Check username
+    if (username !== "admin") {
+      return NextResponse.json(
+        { success: false, message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
         { status: 401 }
       );
     }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, adminPasswordSetting.value);
+
+    if (!isValid) {
+      return NextResponse.json(
+        { success: false, message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
+        { status: 401 }
+      );
+    }
+
+    // Generate token
+    const token = signToken({
+      userId: "admin",
+      email: "admin@prodriver.com",
+      role: "admin",
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "เข้าสู่ระบบสำเร็จ",
+      token,
+    });
   } catch (error) {
     console.error("Admin login error:", error);
     return NextResponse.json(
-      { success: false, error: "เกิดข้อผิดพลาด" },
+      { success: false, message: "เกิดข้อผิดพลาด" },
       { status: 500 }
     );
   }

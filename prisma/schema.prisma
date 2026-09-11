@@ -3,54 +3,91 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  licenses  License[]
-}
-
+// สินค้า (APK ที่ขาย)
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  features    String   // เก็บเป็น JSON string แทน array
-  price       Float
-  downloadUrl String
-  imageUrl    String?
-  category    String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String    @id @default(cuid())
+  name             String
+  shortDescription String?
+  description      String
+  features         String    // JSON array string
+  price            Float
+  apkUrl           String    // ลิงก์ดาวน์โหลด APK
+  imageUrl         String?   // รูปภาพสินค้า
+  category         String
+  version          String?   // เวอร์ชัน APK
+  size             String?   // ขนาดไฟล์
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  licenses    License[]
+  tokens           Token[]
+  payments         Payment[]
+  downloads        Download[]
 }
 
-model License {
-  id          String    @id @default(cuid())
-  key         String    @unique
-  productId   String
-  userId      String
-  deviceId    String?
-  isActivated Boolean   @default(false)
-  activatedAt DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+// Token สำหรับ Login + Download
+model Token {
+  id           String    @id @default(cuid())
+  token        String    @unique // 8 หลัก เช่น 12345678
+  productId    String
+  customerName String
+  customerPhone String
+  isUsed       Boolean   @default(false)
+  usedAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  product     Product   @relation(fields: [productId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  product      Product   @relation(fields: [productId], references: [id])
+  downloads    Download[]
 
-  @@index([key])
-  @@index([userId])
-  @@index([deviceId])
+  @@index([token])
+  @@index([productId])
+}
+
+// การชำระเงิน (PromptPay)
+model Payment {
+  id            String    @id @default(cuid())
+  productId     String
+  customerName  String
+  customerPhone String
+  amount        Float
+  slipImageUrl  String?   // รูปสลิปโอนเงิน
+  status        String    @default("pending") // pending, confirmed, rejected
+  tokenId       String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  product       Product   @relation(fields: [productId], references: [id])
+
+  @@index([status])
+  @@index([productId])
+}
+
+// ประวัติการดาวน์โหลด
+model Download {
+  id           String   @id @default(cuid())
+  tokenId      String
+  productId    String
+  ipAddress    String?
+  userAgent    String?
+  downloadedAt DateTime @default(now())
+
+  token        Token    @relation(fields: [tokenId], references: [id])
+  product      Product  @relation(fields: [productId], references: [id])
+
+  @@index([tokenId])
+}
+
+// ตั้งค่าเว็บไซต์
+model Settings {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }

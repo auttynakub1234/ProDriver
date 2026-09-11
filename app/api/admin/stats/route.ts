@@ -1,30 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyAdminToken } from "@/lib/adminAuth";
 
 export async function GET(request: NextRequest) {
   try {
-    // ตรวจสอบ Admin Token
-    const authResult = verifyAdminToken(request);
-    if (!authResult.success) {
-      return NextResponse.json(authResult, { status: 401 });
-    }
-
-    // นับจำนวนข้อมูล
-    const [totalProducts, totalLicenses, activatedLicenses, totalUsers] = await Promise.all([
+    // Count stats
+    const [totalProducts, totalTokens, pendingPayments, totalDownloads] = await Promise.all([
       prisma.product.count(),
-      prisma.license.count(),
-      prisma.license.count({ where: { isActivated: true } }),
-      prisma.user.count(),
+      prisma.token.count(),
+      prisma.payment.count({ where: { status: "pending" } }),
+      prisma.download.count({
+        where: {
+          downloadedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
+        },
+      }),
     ]);
 
     return NextResponse.json({
       success: true,
       data: {
         totalProducts,
-        totalLicenses,
-        activatedLicenses,
-        totalUsers,
+        totalTokens,
+        pendingPayments,
+        totalDownloads,
+        todayRevenue: 0, // Calculate if needed
       },
     });
   } catch (error) {
