@@ -2,6 +2,7 @@
 /node_modules
 /.pnp
 .pnp.js
+.yarn/install-state.gz
 
 # testing
 /coverage
@@ -16,12 +17,13 @@
 # misc
 .DS_Store
 *.pem
+hs_err_pid*.log
+replay_pid*.log
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-debug.log
 
 # local env files
 .env*.local
@@ -33,3 +35,8 @@ debug.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma
+*.db
+*.db-journal
+/prisma/migrations
