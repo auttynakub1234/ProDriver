@@ -40,3 +40,9 @@ next-env.d.ts
 *.db
 *.db-journal
 /prisma/migrations
+.agents/
+.claude/
+.mcp.json
+skills-lock.json
+debug.log
+android-client/.gradle/
