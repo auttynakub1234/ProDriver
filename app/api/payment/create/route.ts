@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Product from "@/models/Product";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
-
     const body = await request.json();
     const { productId, amount, customerName, customerEmail } = body;
 
     // ตรวจสอบสินค้า
-    const product = await Product.findById(productId);
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
     if (!product) {
       return NextResponse.json(
         { success: false, error: "ไม่พบสินค้า" },
