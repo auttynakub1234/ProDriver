@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  licenses  License[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  features    String[]
+  price       Float
+  downloadUrl String
+  imageUrl    String?
+  category    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  licenses    License[]
+}
+
+model License {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  productId   String
+  userId      String
+  deviceId    String?
+  isActivated Boolean   @default(false)
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product     Product   @relation(fields: [productId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([key])
+  @@index([userId])
+  @@index([deviceId])
+}

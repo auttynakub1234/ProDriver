@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import License from "@/models/License";
-import Product from "@/models/Product";
-import User from "@/models/User";
-import { sendTelegramNotification } from "@/lib/telegram";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 // ⚠️ ใส่ Secret Key จาก Payment Gateway
 const WEBHOOK_SECRET = process.env.PAYMENT_WEBHOOK_SECRET || "your-webhook-secret";
 
 /**
- * รับ Webhook จากระบบชำระเงิน (เช่น PromptPay, TrueMoney, SCB Easy)
+ * รับ Webhook จากระบบชำระเงิน
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const signature = request.headers.get("x-webhook-signature");
 
-    // ตรวจสอบ Signature (ป้องกันการปลอมแปลง)
+    // ตรวจสอบ Signature
     if (!verifyWebhookSignature(body, signature)) {
       return NextResponse.json(
         { success: false, error: "Invalid signature" },
@@ -42,9 +40,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * ตรวจสอบ Webhook Signature
- */
 function verifyWebhookSignature(body: string, signature: string | null): boolean {
   if (!signature) return false;
 
@@ -59,27 +54,31 @@ function verifyWebhookSignature(body: string, signature: string | null): boolean
   );
 }
 
-/**
- * จัดการเมื่อชำระเงินสำเร็จ
- */
 async function handlePaymentSuccess(data: any) {
-  await connectDB();
-
   const { orderId, amount, productId, userEmail, userName } = data;
 
   // สร้างผู้ใช้ใหม่ (ถ้ายังไม่มี)
-  let user = await User.findOne({ email: userEmail });
+  let user = await prisma.user.findUnique({
+    where: { email: userEmail },
+  });
+
   if (!user) {
-    user = await User.create({
-      email: userEmail,
-      name: userName || "Customer",
-      password: crypto.randomBytes(16).toString("hex"), // รหัสผ่านสุ่ม
-      role: "user",
+    const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10);
+    user = await prisma.user.create({
+      data: {
+        email: userEmail,
+        name: userName || "Customer",
+        password: hashedPassword,
+        role: "user",
+      },
     });
   }
 
   // ดึงข้อมูลสินค้า
-  const product = await Product.findById(productId);
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+
   if (!product) {
     throw new Error("Product not found");
   }
@@ -87,14 +86,16 @@ async function handlePaymentSuccess(data: any) {
   // สร้าง License Key
   const licenseKey = generateLicenseKey();
 
-  const license = await License.create({
-    key: licenseKey,
-    productId: product._id,
-    userId: user._id,
-    isActivated: false,
+  await prisma.license.create({
+    data: {
+      key: licenseKey,
+      productId: product.id,
+      userId: user.id,
+      isActivated: false,
+    },
   });
 
-  // ส่งการแจ้งเตือนไปยัง Telegram (แจ้ง Admin)
+  // ส่งการแจ้งเตือนไปยัง Telegram
   await sendTelegramNotification({
     key: licenseKey,
     deviceId: "N/A (ยังไม่ได้เปิดใช้งาน)",
@@ -102,15 +103,9 @@ async function handlePaymentSuccess(data: any) {
     userEmail: user.email,
   });
 
-  // TODO: ส่งอีเมลแจ้ง License Key ให้ลูกค้า
-  // sendEmailToCustomer(user.email, licenseKey, product.name);
-
   console.log(`✅ License created: ${licenseKey} for ${user.email}`);
 }
 
-/**
- * สร้าง License Key แบบสุ่ม (XXXX-XXXX-XXXX-XXXX)
- */
 function generateLicenseKey(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const segments = 4;

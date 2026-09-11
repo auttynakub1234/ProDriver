@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Product from "@/models/Product";
+import { prisma } from "@/lib/prisma";
 import { ApiResponse } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
-
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get("category");
 
     // ค้นหาสินค้าที่เปิดใช้งาน
-    const query: any = { isActive: true };
-    if (category) {
-      query.category = category;
-    }
-
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const products = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        ...(category && { category }),
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     return NextResponse.json<ApiResponse>({
       success: true,

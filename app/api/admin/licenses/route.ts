@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import License from "@/models/License";
+import { prisma } from "@/lib/prisma";
 import { verifyAdminToken } from "@/lib/adminAuth";
 
 export async function GET(request: NextRequest) {
@@ -10,13 +9,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(authResult, { status: 401 });
     }
 
-    await connectDB();
-
-    const licenses = await License.find()
-      .populate("productId", "name")
-      .populate("userId", "name email")
-      .sort({ createdAt: -1 })
-      .limit(100);
+    const licenses = await prisma.license.findMany({
+      include: {
+        product: {
+          select: { name: true },
+        },
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+    });
 
     return NextResponse.json({
       success: true,
@@ -38,17 +44,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(authResult, { status: 401 });
     }
 
-    await connectDB();
-
     const body = await request.json();
     const { key, productId, userId, expiresAt } = body;
 
-    const newLicense = await License.create({
-      key: key.toUpperCase(),
-      productId,
-      userId,
-      expiresAt: expiresAt || null,
-      isActivated: false,
+    const newLicense = await prisma.license.create({
+      data: {
+        key: key.toUpperCase(),
+        productId,
+        userId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActivated: false,
+      },
     });
 
     return NextResponse.json(
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Create license error:", error);
 
-    if (error.code === 11000) {
+    if (error.code === 'P2002') {
       return NextResponse.json(
         { success: false, error: "คีย์นี้มีในระบบแล้ว" },
         { status: 400 }

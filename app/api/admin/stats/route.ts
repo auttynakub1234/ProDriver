@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Product from "@/models/Product";
-import License from "@/models/License";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import { verifyAdminToken } from "@/lib/adminAuth";
 
 export async function GET(request: NextRequest) {
@@ -13,14 +10,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(authResult, { status: 401 });
     }
 
-    await connectDB();
-
     // นับจำนวนข้อมูล
     const [totalProducts, totalLicenses, activatedLicenses, totalUsers] = await Promise.all([
-      Product.countDocuments(),
-      License.countDocuments(),
-      License.countDocuments({ isActivated: true }),
-      User.countDocuments(),
+      prisma.product.count(),
+      prisma.license.count(),
+      prisma.license.count({ where: { isActivated: true } }),
+      prisma.user.count(),
     ]);
 
     return NextResponse.json({

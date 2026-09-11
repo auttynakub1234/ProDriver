@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import License from "@/models/License";
-import Product from "@/models/Product";
-import User from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/jwt";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { ActivateKeyRequest, ActivateKeyResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
-
     const body: ActivateKeyRequest = await request.json();
     const { key, deviceId } = body;
 
@@ -25,7 +20,13 @@ export async function POST(request: NextRequest) {
     }
 
     // ค้นหาคีย์ในฐานข้อมูล
-    const license = await License.findOne({ key: key.toUpperCase() });
+    const license = await prisma.license.findUnique({
+      where: { key: key.toUpperCase() },
+      include: {
+        product: true,
+        user: true,
+      },
+    });
 
     if (!license) {
       return NextResponse.json<ActivateKeyResponse>(
@@ -42,13 +43,10 @@ export async function POST(request: NextRequest) {
       // ถ้าคีย์ถูกใช้งานแล้ว ตรวจสอบว่าเป็นเครื่องเดียวกันหรือไม่
       if (license.deviceId === deviceId) {
         // เครื่องเดียวกัน ให้ข้อมูลสินค้า
-        const product = await Product.findById(license.productId);
-        const user = await User.findById(license.userId);
-
         const token = signToken({
-          userId: user?._id.toString() || "system",
-          email: user?.email || "system@prodriver.local",
-          role: user?.role || "user",
+          userId: license.user.id,
+          email: license.user.email,
+          role: license.user.role,
         });
 
         return NextResponse.json<ActivateKeyResponse>({
@@ -56,8 +54,8 @@ export async function POST(request: NextRequest) {
           message: "เข้าสู่ระบบสำเร็จ",
           token,
           product: {
-            name: product?.name || "ProDriver Premium",
-            downloadUrl: product?.downloadUrl || "#",
+            name: license.product.name,
+            downloadUrl: license.product.downloadUrl,
           },
         });
       } else {
@@ -84,28 +82,28 @@ export async function POST(request: NextRequest) {
     }
 
     // อัปเดตสถานะคีย์ - เปิดใช้งาน
-    license.isActivated = true;
-    license.deviceId = deviceId;
-    license.activatedAt = new Date();
-    await license.save();
-
-    // ดึงข้อมูลสินค้าและผู้ใช้
-    const product = await Product.findById(license.productId);
-    const user = await User.findById(license.userId);
+    await prisma.license.update({
+      where: { id: license.id },
+      data: {
+        isActivated: true,
+        deviceId: deviceId,
+        activatedAt: new Date(),
+      },
+    });
 
     // ส่งการแจ้งเตือนไปยัง Telegram
     await sendTelegramNotification({
       key: key.toUpperCase(),
       deviceId,
-      productName: product?.name,
-      userEmail: user?.email,
+      productName: license.product.name,
+      userEmail: license.user.email,
     });
 
     // สร้าง JWT Token
     const token = signToken({
-      userId: user?._id.toString() || "system",
-      email: user?.email || "system@prodriver.local",
-      role: user?.role || "user",
+      userId: license.user.id,
+      email: license.user.email,
+      role: license.user.role,
     });
 
     return NextResponse.json<ActivateKeyResponse>(
@@ -114,8 +112,8 @@ export async function POST(request: NextRequest) {
         message: "เปิดใช้งานคีย์สำเร็จ",
         token,
         product: {
-          name: product?.name || "ProDriver Premium",
-          downloadUrl: product?.downloadUrl || "#",
+          name: license.product.name,
+          downloadUrl: license.product.downloadUrl,
         },
       },
       { status: 200 }
