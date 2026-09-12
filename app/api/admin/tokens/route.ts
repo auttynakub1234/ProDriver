@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
         customerName,
         customerPhone,
         expiresAt,
-        isUsed: false,
       },
       include: {
         product: true,
