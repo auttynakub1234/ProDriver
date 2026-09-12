@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendTelegramNotification } from "@/lib/telegram";
 
@@ -55,24 +54,7 @@ function verifyWebhookSignature(body: string, signature: string | null): boolean
 }
 
 async function handlePaymentSuccess(data: any) {
-  const { orderId, amount, productId, userEmail, userName } = data;
-
-  // สร้างผู้ใช้ใหม่ (ถ้ายังไม่มี)
-  let user = await prisma.user.findUnique({
-    where: { email: userEmail },
-  });
-
-  if (!user) {
-    const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10);
-    user = await prisma.user.create({
-      data: {
-        email: userEmail,
-        name: userName || "Customer",
-        password: hashedPassword,
-        role: "user",
-      },
-    });
-  }
+  const { orderId, amount, productId, customerName, customerPhone } = data;
 
   // ดึงข้อมูลสินค้า
   const product = await prisma.product.findUnique({
@@ -83,40 +65,42 @@ async function handlePaymentSuccess(data: any) {
     throw new Error("Product not found");
   }
 
-  // สร้าง License Key
-  const licenseKey = generateLicenseKey();
+  // สร้าง Token (8 หลัก)
+  const generateToken = () => {
+    return Math.floor(10000000 + Math.random() * 90000000).toString();
+  };
 
-  await prisma.license.create({
+  let token = generateToken();
+
+  // Check if token already exists
+  let existingToken = await prisma.token.findUnique({
+    where: { token },
+  });
+
+  while (existingToken) {
+    token = generateToken();
+    existingToken = await prisma.token.findUnique({
+      where: { token },
+    });
+  }
+
+  // สร้าง Token
+  await prisma.token.create({
     data: {
-      key: licenseKey,
+      token,
       productId: product.id,
-      userId: user.id,
-      isActivated: false,
+      customerName: customerName || "Customer",
+      customerPhone: customerPhone || "N/A",
     },
   });
 
   // ส่งการแจ้งเตือนไปยัง Telegram
   await sendTelegramNotification({
-    key: licenseKey,
-    deviceId: "N/A (ยังไม่ได้เปิดใช้งาน)",
+    key: token,
+    deviceId: "Token System (ไม่ล็อกเครื่อง)",
     productName: product.name,
-    userEmail: user.email,
+    userEmail: customerPhone || customerName,
   });
 
-  console.log(`✅ License created: ${licenseKey} for ${user.email}`);
-}
-
-function generateLicenseKey(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const segments = 4;
-  const segmentLength = 4;
-  let key = "";
-
-  for (let i = 0; i < segments; i++) {
-    if (i > 0) key += "-";
-    for (let j = 0; j < segmentLength; j++) {
-      key += chars[Math.floor(Math.random() * chars.length)];
-    }
-  }
-  return key;
+  console.log(`✅ Token created: ${token} for ${customerName}`);
 }
