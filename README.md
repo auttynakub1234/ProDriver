@@ -2,7 +2,7 @@
 
 ## 🎉 ระบบสมบูรณ์และพร้อมใช้งาน!
 
-ระบบขายและจัดการ License Key สำหรับ Mod APK พร้อมระบบ Token Authentication
+ระบบขายและจัดการ Mod APK พร้อมระบบ Token Authentication (ไม่ล็อก Device ID)
 
 ---
 
@@ -10,23 +10,21 @@
 
 ### 🌐 Web Application
 - ✅ หน้าแรก - แสดงสินค้าและข้อมูล
-- ✅ หน้าเปิดใช้งานคีย์ - ใช้ License Key + Device ID
-- ✅ Dashboard - หลังเปิดใช้งานแล้ว
-- ✅ Token-based Authentication (JWT)
+- ✅ Login ด้วย Token (8 หลัก) - ไม่ล็อก Device ID
+- ✅ ดาวน์โหลด APK ได้หลายเครื่อง
+- ✅ ติดตามจำนวนดาวน์โหลด
 
 ### 👨‍💼 Admin Panel
 - ✅ Dashboard พร้อมสถิติ
 - ✅ จัดการสินค้า (CRUD)
-- ✅ จัดการ License Keys (สร้าง/ดู/ตรวจสอบ)
-- ✅ จัดการผู้ใช้
-- ✅ Login: `/admin/login` (admin/admin123)
+- ✅ จัดการ Token (สร้าง/ดู/ติดตาม) - ไม่ล็อก Device ID
+- ✅ ติดตามการดาวน์โหลด
+- ✅ Login: `/admin/login` (ตั้งค่าใน ENV)
 
 ### 📱 Android Client
-- ✅ Java + Kotlin พร้อมใช้
-- ✅ Encrypted SharedPreferences
-- ✅ ProGuard Obfuscation
-- ✅ Device ID Detection
-- ✅ API Integration
+- ⚠️ ไม่จำเป็นอีกต่อไป - ระบบใหม่ใช้ Token แทน
+- ดาวน์โหลด APK ได้จากเว็บโดยตรง
+- ไม่ต้องส่ง Device ID
 
 ### 💳 Payment System
 - ✅ Webhook Endpoint
@@ -36,21 +34,22 @@
 
 ### 🔔 Notifications
 - ✅ Telegram Bot Integration
-- ✅ แจ้งเตือนเมื่อมีการเปิดใช้งานคีย์
-- ✅ แสดง Device ID และข้อมูลสินค้า
+- ✅ แจ้งเตือนเมื่อมีการดาวน์โหลด
+- ✅ แสดง Token และข้อมูลสินค้า
 
 ---
 
 ## 🗄️ Database
 
-**Current**: SQLite (Development)
-- ✅ ไม่ต้องตั้งค่าอะไร
-- ✅ ไฟล์เดียว: `prisma/dev.db`
-- ✅ พร้อมใช้งานทันที
-
-**Production**: Supabase (Recommended)
-- ฟรี 500 MB
+**Current**: PostgreSQL (Supabase)
+- ✅ Production ready
+- ✅ ฟรี 500 MB
+- ✅ Connection Pooling
 - ดูวิธีตั้งค่า: `docs/SUPABASE_SETUP.md`
+
+**Development**: SQLite (Optional)
+- ใช้สำหรับ local development
+- ไฟล์เดียว: `prisma/dev.db`
 
 ---
 
@@ -66,12 +65,13 @@ npm install
 ### 2. Setup Environment
 แก้ไข `.env.local`:
 ```env
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="postgresql://user:password@host:5432/database"
 JWT_SECRET=your-32-character-secret-key-here
 TELEGRAM_BOT_TOKEN=123456789:ABC...
 TELEGRAM_CHAT_ID=123456789
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=secure-password
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ### 3. Create Database
@@ -129,14 +129,13 @@ ProDriver/
 
 ## 🔐 Security Features
 
-- ✅ JWT Token Authentication
+- ✅ Token Authentication (8-digit codes)
 - ✅ bcrypt Password Hashing
-- ✅ Device ID Binding (1 Key = 1 Device)
-- ✅ Webhook Signature Verification
+- ✅ **ไม่ล็อก Device ID** - ใช้ได้หลายเครื่อง
+- ✅ ติดตามการดาวน์โหลด (IP, User Agent)
+- ✅ กำหนดวันหมดอายุ Token ได้
 - ✅ Environment Variables
 - ✅ HTTPS Only (Production)
-- ✅ ProGuard Code Obfuscation (Android)
-- ✅ Encrypted SharedPreferences (Android)
 
 ---
 
@@ -145,15 +144,15 @@ ProDriver/
 ### Public APIs
 ```
 GET  /api/products          # รายการสินค้า
-POST /api/activate          # เปิดใช้งานคีย์
+POST /api/token/login       # Login ด้วย Token (8 หลัก)
 ```
 
-### Admin APIs (ต้องมี Token)
+### Admin APIs (ต้อง Login)
 ```
 POST /api/admin/login       # Admin login
 GET  /api/admin/stats       # สถิติ
-GET  /api/admin/licenses    # รายการคีย์
-POST /api/admin/licenses    # สร้างคีย์ใหม่
+GET  /api/admin/tokens      # รายการ Token
+POST /api/admin/tokens      # สร้าง Token ใหม่
 ```
 
 ### Payment APIs
@@ -207,19 +206,20 @@ POST /api/webhook/payment   # รับ webhook
 
 ### For Customers
 1. ซื้อสินค้าผ่านเว็บไซต์/LINE
-2. ชำระเงิน (QR Code / บัตร)
-3. ได้รับ License Key ทาง Email/LINE
-4. ดาวน์โหลดและติดตั้ง APK
-5. เปิดแอป → กรอก License Key
-6. แอปส่ง Key + Device ID → API
-7. รับ Token และเริ่มใช้งาน ✅
+2. ชำระเงิน (PromptPay)
+3. ได้รับ Token (8 หลัก) ทาง LINE
+4. เข้าเว็บไซต์ `/login`
+5. กรอก Token 8 หลัก
+6. ดาวน์โหลด APK ได้เลย ✅
+7. **ใช้ได้หลายเครื่อง** - ไม่ล็อก Device ID
 
 ### For Admin
 1. Login ที่ `/admin/login`
 2. ดู Dashboard (สถิติต่างๆ)
 3. จัดการสินค้า
-4. สร้าง/ดู License Keys
-5. รับแจ้งเตือนผ่าน Telegram
+4. สร้าง Token ให้ลูกค้า (8 หลัก)
+5. ส่ง Token ให้ลูกค้าทาง LINE
+6. รับแจ้งเตือนผ่าน Telegram (optional)
 
 ---
 
@@ -322,36 +322,42 @@ npx prisma generate
 ## 📊 Database Schema
 
 ```prisma
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("user")
-  licenses  License[]
-}
-
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  features    String   // JSON string
-  price       Float
-  downloadUrl String
-  category    String
-  licenses    License[]
+  id               String    @id @default(cuid())
+  name             String
+  description      String
+  features         String    // JSON array
+  price            Float
+  apkUrl           String
+  category         String
+  version          String?
+  size             String?
+  tokens           Token[]
+  downloads        Download[]
 }
 
-model License {
-  id          String    @id @default(cuid())
-  key         String    @unique
-  productId   String
-  userId      String
-  deviceId    String?
-  isActivated Boolean   @default(false)
-  activatedAt DateTime?
-  product     Product   @relation(...)
-  user        User      @relation(...)
+model Token {
+  id            String    @id @default(cuid())
+  token         String    @unique  // 8 หลัก
+  productId     String
+  customerName  String
+  customerPhone String
+  downloadCount Int       @default(0)
+  lastUsedAt    DateTime?
+  expiresAt     DateTime?
+  product       Product   @relation(...)
+  downloads     Download[]
+}
+
+model Download {
+  id           String   @id @default(cuid())
+  tokenId      String
+  productId    String
+  ipAddress    String?
+  userAgent    String?
+  downloadedAt DateTime @default(now())
+  token        Token    @relation(...)
+  product      Product  @relation(...)
 }
 ```
 
