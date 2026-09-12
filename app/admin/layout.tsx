@@ -52,16 +52,10 @@ export default function AdminLayout({
                   สินค้า
                 </Link>
                 <Link
-                  href="/admin/licenses"
+                  href="/admin/tokens"
                   className="text-gray-700 hover:text-indigo-600 px-3 py-2"
                 >
-                  คีย์
-                </Link>
-                <Link
-                  href="/admin/users"
-                  className="text-gray-700 hover:text-indigo-600 px-3 py-2"
-                >
-                  ผู้ใช้
+                  Token
                 </Link>
               </div>
             </div>
